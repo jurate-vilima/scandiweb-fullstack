@@ -7,24 +7,76 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Type\SchemaConfig;
+
+use App\Models\Category;
+
 use RuntimeException;
 use Throwable;
 
 class GraphQL {
-    static public function handle() {
+    static public function handle() : string {
         try {
-            $queryType = new ObjectType([
-                'name' => 'Query',
+            $categoryType = new ObjectType([
+                'name'   => 'Category',
                 'fields' => [
-                    'echo' => [
-                        'type' => Type::string(),
-                        'args' => [
-                            'message' => ['type' => Type::string()],
-                        ],
-                        'resolve' => static fn ($rootValue, array $args): string => $rootValue['prefix'] . $args['message'],
-                    ],
+                    // 'id'   => Type::int(),
+                    'name' => Type::string(),
                 ],
             ]);
+
+            $attributeType = new ObjectType([
+                'name'   => 'Attribute',
+                'fields' => [
+                    'name'  => Type::string(),
+                    'type'  => Type::string(),
+                    'value' => Type::string(),
+                ],
+            ]);
+
+            $productType = new ObjectType([
+                'name'   => 'Product',
+                'fields' => function() use ($categoryType, $attributeType) {
+                    return [
+                        'id'          => Type::string(),
+                        'name'        => Type::string(),
+                        'inStock'     => Type::boolean(),
+                        'description' => Type::string(),
+                        'brand'       => Type::string(),
+                        'gallery'     => Type::listOf(Type::string()),
+                        'category'    => $categoryType,
+                        'attributes'  => Type::listOf($attributeType),
+                    ];
+                },
+            ]);
+
+            $queryType = new ObjectType([
+                'name'   => 'Query',
+                'fields' => [
+                    'categories' => [
+                        'type' => Type::listOf($categoryType),
+                        'resolve' => function() {
+                            $category = new Category();
+                            // $categories = $category->findAll();
+                            // return array_map(fn($cat) => $cat->getData(), $categories);
+                            return $category->findAll();
+                        },
+                    ],
+
+                ],
+            ]);
+
+            // $queryType = new ObjectType([
+            //     'name' => 'Query',
+            //     'fields' => [
+            //         'echo' => [
+            //             'type' => Type::string(),
+            //             'args' => [
+            //                 'message' => ['type' => Type::string()],
+            //             ],
+            //             'resolve' => static fn ($rootValue, array $args): string => $rootValue['prefix'] . $args['message'],
+            //         ],
+            //     ],
+            // ]);
         
             $mutationType = new ObjectType([
                 'name' => 'Mutation',
@@ -59,7 +111,10 @@ class GraphQL {
         
             $rootValue = ['prefix' => 'You said: '];
             $result = GraphQLBase::executeQuery($schema, $query, $rootValue, null, $variableValues);
+            
             $output = $result->toArray();
+            // print json_encode($output);
+            // var_dump($output);
         } catch (Throwable $e) {
             $output = [
                 'error' => [
