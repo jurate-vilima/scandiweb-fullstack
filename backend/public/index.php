@@ -7,8 +7,8 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../config/.env');
-// $dotenv->load();
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../config');
+$dotenv->load();
 
 $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     $r->post('/graphql', [App\Controller\GraphQL::class, 'handle']);
@@ -36,7 +36,7 @@ switch ($routeInfo[0]) {
         $controller = new $routeInfo[1][0];
         $action = $routeInfo[1][1];
 
-        $controller->$action();
+        echo $controller->$action();
         // $handler = $routeInfo[1];
         // $vars = $routeInfo[2];
         // echo $handler($vars);

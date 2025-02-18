@@ -1,25 +1,26 @@
 <?php
-
 namespace App\Controller;
 
 use GraphQL\GraphQL as GraphQLBase;
+use GraphQL\Error\DebugFlag;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Type\SchemaConfig;
-
+use App\Database;
 use App\Models\Category;
-
 use RuntimeException;
 use Throwable;
 
 class GraphQL {
-    static public function handle() : string {
+    static public function handle() : string { 
         try {
+            // Create a local Database instance
+            $db = new Database();
+
             $categoryType = new ObjectType([
                 'name'   => 'Category',
                 'fields' => [
-                    // 'id'   => Type::int(),
                     'name' => Type::string(),
                 ],
             ]);
@@ -54,30 +55,23 @@ class GraphQL {
                 'fields' => [
                     'categories' => [
                         'type' => Type::listOf($categoryType),
-                        'resolve' => function() {
-                            $category = new Category();
-                            // $categories = $category->findAll();
-                            // return array_map(fn($cat) => $cat->getData(), $categories);
-                            return $category->findAll();
+                        'resolve' => function($root, $args, $context, $info) use ($db) {
+                           //die(json_encode($info, JSON_PRETTY_PRINT));
+
+                            $fields = array_map(fn($field) => $field->name->value, iterator_to_array($info->fieldNodes[0]->selectionSet->selections));
+                            // return $fields;
+                            // $params = $info->fieldNodes[0]->selectionSet->selections;
+                            print_r($fields); 
+                            exit();
+
+                            // return $fields;
+                            $category = new Category($db);
+                            return $category->findAll($fields);
                         },
                     ],
-
                 ],
             ]);
 
-            // $queryType = new ObjectType([
-            //     'name' => 'Query',
-            //     'fields' => [
-            //         'echo' => [
-            //             'type' => Type::string(),
-            //             'args' => [
-            //                 'message' => ['type' => Type::string()],
-            //             ],
-            //             'resolve' => static fn ($rootValue, array $args): string => $rootValue['prefix'] . $args['message'],
-            //         ],
-            //     ],
-            // ]);
-        
             $mutationType = new ObjectType([
                 'name' => 'Mutation',
                 'fields' => [
@@ -91,30 +85,33 @@ class GraphQL {
                     ],
                 ],
             ]);
-        
-            // See docs on schema options:
-            // https://webonyx.github.io/graphql-php/schema-definition/#configuration-options
+
             $schema = new Schema(
                 (new SchemaConfig())
-                ->setQuery($queryType)
-                ->setMutation($mutationType)
+                    ->setQuery($queryType)
+                    ->setMutation($mutationType)
             );
-        
+
             $rawInput = file_get_contents('php://input');
             if ($rawInput === false) {
                 throw new RuntimeException('Failed to get php://input');
             }
-        
+
             $input = json_decode($rawInput, true);
             $query = $input['query'];
             $variableValues = $input['variables'] ?? null;
-        
+
             $rootValue = ['prefix' => 'You said: '];
-            $result = GraphQLBase::executeQuery($schema, $query, $rootValue, null, $variableValues);
-            
-            $output = $result->toArray();
-            // print json_encode($output);
-            // var_dump($output);
+            $result = GraphQLBase::executeQuery(
+                $schema,
+                $query,
+                $rootValue,
+                null,
+                $variableValues
+            );
+
+            // Include debug details for error tracing
+            $output = $result->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE);
         } catch (Throwable $e) {
             $output = [
                 'error' => [
