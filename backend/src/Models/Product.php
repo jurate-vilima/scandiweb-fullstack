@@ -1,87 +1,62 @@
 <?php
 namespace App\Models;
 
+use App\Database;
+
 class Product extends Model {
-    private string $id;
-    private string $name;
-    private bool $inStock;
-    private ?string $description;
-    private int $categoryId;
-    private ?string $brand;
+    protected string $tableName = 'products';
 
-    private array $galleries;
-
-    private array $attributes;
-    private Price $price;
-
-    public function __construct(
-        string $id,
-        string $name,
-        bool $inStock,
-        ?string $description = null,
-        int $categoryId,
-        ?string $brand = null,
-        array $galleries = [],
-        array $attributes = [],
-        Price $price = null
-    ) {
-        $this->id = $id;
-        $this->name = $name;
-        $this->inStock = $inStock;
-        $this->description = $description;
-        $this->categoryId = $categoryId;
-        $this->brand = $brand;
-        $this->galleries = $galleries;
-        $this->attributes = $attributes;
-        $this->price = $price;
+    public function getId(): ?string {
+        return $this->data['id'] ?? null;
     }
 
-
-    public function getId(): string {
-        return $this->id;
-    }
-
-    public function getName(): string {
-        return $this->name;
+    public function getName(): ?string {
+        return $this->data['name'] ?? null;
     }
 
     public function isInStock(): bool {
-        return $this->inStock;
+        return $this->data['in_stock'] ?? false;
     }
 
-    public function getDescription(): string {
-        return $this->description;
+    public function getDescription(): ?string {
+        return $this->data['description'] ?? null;
     }
 
     public function getCategoryId(): ?int {
-        return $this->categoryId;
+        return $this->data['category_id'] ?? null;
     }
 
     public function getBrand(): ?string {
-        return $this->brand;
+        return $this->data['brand'] ?? null;
     }
 
     public function getGalleries(): array {
-        return $this->galleries;
+        return $this->data['galleries'] ?? [];
     }
 
     public function getAttributes(): array {
-        return $this->attributes;
+        return $this->data['attributes'] ?? [];
     }
 
-    public function getPrice(): ?Price {
-        return $this->price;
+    public function getPrice(): ?float {
+        return $this->data['price'] ?? null;
     }
 
-    public function setGalleries(array $galleries): void {
-        $this->galleries = $galleries;
-    }
+    public function getCategory(): ?Category {
+        $categoryId = $this->getCategoryId();
+        if ($categoryId) {
+            // Fetch category name using the category_id
+            $sql = "
+                SELECT c.name AS category_name 
+                FROM categories c 
+                WHERE c.id = :category_id
+            ";
+            $categoryData = $this->db->executeQuery($sql, ['category_id' => $categoryId]);
 
-    public function setAttributes(array $attributes): void {
-        $this->attributes = $attributes;
-    }
-
-    public function setPrice(Price $price): void {
-        $this->price = $price;
+            if ($categoryData) {
+                return $categoryData[0]['category_name'];
+            }
+        }
+        return null;
     }
 }

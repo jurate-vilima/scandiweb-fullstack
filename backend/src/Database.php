@@ -9,9 +9,6 @@ class Database {
     private PDO $pdo;
 
     public function __construct() {
-        // $dotenv = Dotenv::createImmutable(__DIR__ . '/../config/.env'); 
-        // $dotenv->load();
-
         $dsn = "mysql:host=" . $_ENV['DB_HOST'] . ";dbname=" . $_ENV['DB_NAME'] . ";charset=utf8";
 
         try {
@@ -24,17 +21,12 @@ class Database {
         }
     }
 
-    public function fetchAll(string $sql, array $params = []) {
-        if (!$this->pdo) {
-            throw new \Exception("DB connection is not established.");
-        }
-
+    public function executeQuery(string $sql, array $params = [], bool $single = false) {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        
-        return ($stmt->fetchAll(\PDO::FETCH_ASSOC));
-        //return [ ['name' => 'Test Category'] ];
-    }
+    
+        return $single ? $stmt->fetch(PDO::FETCH_ASSOC) : $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }    
 
     public function getConnection() {
         return $this->pdo;

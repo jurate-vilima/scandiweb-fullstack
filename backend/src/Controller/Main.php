@@ -9,9 +9,16 @@ class Main {
     public function main() {
         $url = 'http://scandiweb-store/graphql'; 
         $query = '{
-          categories {
+        products {
+            id
             name
-          }
+            in_stock
+            description
+            category {
+            id
+            name
+            }
+        }
         }';
 
         $data = json_encode(['query' => $query]);
@@ -31,7 +38,7 @@ class Main {
         ]);
 
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        //$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if (curl_errno($ch)) {
             echo 'Curl error: ' . curl_error($ch) . "\n";
@@ -59,7 +66,7 @@ class Main {
         } else {
             // echo "Final result:\n";
             print "<pre>";
-            var_dump($response);
+            print_r($response);
             print "</pre>";
         }
     }
