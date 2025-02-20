@@ -6,6 +6,10 @@ use App\Database;
 class Product extends Model {
     protected string $tableName = 'products';
 
+    public function __construct(Database $db, array $data = []) {
+        parent::__construct($db, $data); 
+    }
+
     public function getId(): ?string {
         return $this->data['id'] ?? null;
     }
@@ -30,8 +34,20 @@ class Product extends Model {
         return $this->data['brand'] ?? null;
     }
 
-    public function getGalleries(): array {
-        return $this->data['galleries'] ?? [];
+    public function getGallery(): ?array {
+        $productId = $this->getId();
+        // var_dump($productId);
+
+        $sql = "
+            SELECT image_url 
+            FROM galleries 
+            WHERE product_id = :product_id
+        ";
+
+        $galleryData = $this->db->executeQuery($sql, ['product_id' => $productId], false);
+
+        // return array_column($galleryData, 'image_url') ?: [];
+        return $galleryData;
     }
 
     public function getAttributes(): array {
@@ -42,19 +58,21 @@ class Product extends Model {
         return $this->data['price'] ?? null;
     }
 
-    public function getCategory(): ?Category {
+    public function getCategory(array $fields): ?array {
         $categoryId = $this->getCategoryId();
-        if ($categoryId) {
-            // Fetch category name using the category_id
-            $sql = "
-                SELECT c.name AS category_name 
-                FROM categories c 
-                WHERE c.id = :category_id
-            ";
-            $categoryData = $this->db->executeQuery($sql, ['category_id' => $categoryId]);
 
+        $fieldsToFetch = implode(', ', $fields);
+
+        if ($categoryId) {
+            $sql = "
+                SELECT $fieldsToFetch 
+                FROM categories 
+                WHERE id = :category_id
+            ";
+            $categoryData = $this->db->executeQuery($sql, ['category_id' => $categoryId], true);
+    
             if ($categoryData) {
-                return $categoryData[0]['category_name'];
+                return $categoryData;
             }
         }
         return null;

@@ -9,16 +9,15 @@ class Main {
     public function main() {
         $url = 'http://scandiweb-store/graphql'; 
         $query = '{
-        products {
-            id
-            name
-            in_stock
-            description
-            category {
-            id
-            name
+            products {
+                id
+                name
+                in_stock
+                gallery 
+                category {
+                    name
+                }
             }
-        }
         }';
 
         $data = json_encode(['query' => $query]);
@@ -66,7 +65,7 @@ class Main {
         } else {
             // echo "Final result:\n";
             print "<pre>";
-            print_r($response);
+            var_dump($response);
             print "</pre>";
         }
     }

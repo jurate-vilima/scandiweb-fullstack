@@ -36,7 +36,8 @@ switch ($routeInfo[0]) {
         $controller = new $routeInfo[1][0];
         $action = $routeInfo[1][1];
 
-        echo $controller->$action();
+        // echo $controller->$action();
+        print_r($controller->$action());
         // $handler = $routeInfo[1];
         // $vars = $routeInfo[2];
         // echo $handler($vars);

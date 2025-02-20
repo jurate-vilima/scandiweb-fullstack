@@ -16,7 +16,7 @@ use RuntimeException;
 use Throwable;
 
 class GraphQL {
-    static public function handle() : string { 
+    static public function handle()  { 
         try {
             $db = new Database();
 
@@ -59,6 +59,7 @@ class GraphQL {
         }
 
         header('Content-Type: application/json; charset=UTF-8');
+        // return $output;
         return json_encode($output);
     }
 
@@ -73,8 +74,8 @@ class GraphQL {
         return new ObjectType([
             'name'   => 'Category',
             'fields' => [
+                'id' => Type::id(),
                 'name' => Type::string(),
-                'id' => Type::int(),
             ],
         ]);
     }
@@ -95,13 +96,56 @@ class GraphQL {
             'name'   => 'Product',
             'fields' => function() use ($db, $categoryType, $attributeType) {
                 return [
-                    'id'          => Type::string(),
-                    'name'        => Type::string(),
-                    'in_stock'    => Type::boolean(),
-                    'description' => Type::string(),
-                    'brand'       => Type::string(),
-                    'gallery'     => Type::listOf(Type::string()),
-                    'category'    => $categoryType,
+                    'id'          => [
+                        'type' => Type::id(),
+                        'resolve' => function ($product) {
+                            return $product->getId();
+                        },
+                    ],
+                    'name'        => [
+                        'type' => Type::string(),
+                        'resolve' => function ($product) {
+                            return $product->getName();
+                        },
+                    ],
+                    'in_stock'    => [
+                        'type' => Type::boolean(),
+                        'resolve' => function ($product) {
+                            return $product->isInStock();
+                        },
+                    ],
+                    'description' => [
+                        'type' => Type::string(),
+                        'resolve' => function ($product) {
+                            return $product->getDescription();
+                        },
+                    ],
+                    'brand'       => [
+                        'type' => Type::string(),
+                        'resolve' => function ($product) {
+                            return $product->getBrand();
+                        },
+                    ],
+                    'gallery'     => [
+                        'type' => Type::listOf(Type::string()),
+                        'resolve' => function ($product) {
+                            $galleryData = $product->getGallery(); // Assuming this is an array of objects
+                            $galleryUrls = array_map(fn($image) => $image['image_url'], $galleryData);
+                            return $galleryUrls;
+                            
+                            // return $product->getGallery();
+                        },
+                    ],
+                    'category' => [
+                        'type' => $categoryType,
+                        'resolve' => function ($product, $args, $context, $info) {
+                            $fields = self::getRequestedFields($info);
+                            // var_dump($product);
+                            // exit();
+                            return $product->getCategory($fields);
+                            // return ['name' => 'clothes'];
+                        },
+                    ],
                 ];
             },
         ]);
@@ -116,8 +160,9 @@ class GraphQL {
                     'resolve' => function($root, $args, $context, $info) use ($db) {
                         $fields = self::getRequestedFields($info);
                         $product = new Product($db);
+                        $products = $product->findAllFields($fields);
 
-                        return $product->findAllFields($fields);
+                        return $products;
                     },
                 ],
 
