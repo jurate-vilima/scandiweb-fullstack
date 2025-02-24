@@ -7,10 +7,10 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Schema;
 use GraphQL\Type\SchemaConfig;
-use App\Database;
+use App\Database\Database;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Services\ProductService;
+use App\Repositories\ProductRepository;
 
 use RuntimeException;
 use Throwable;
@@ -19,16 +19,22 @@ class GraphQL {
     static public function handle()  { 
         try {
             $db = new Database();
+            $productRepo = new ProductRepository($db);
+            $productService = new ProductService($productRepo);
 
             $categoryType = self::createCategoryType();
             $attributeType = self::createAttributeType();
-            $productType = self::createProductType($db, $categoryType, $attributeType);
+            $productType = self::createProductType($categoryType, $attributeType);
 
-            $queryType = self::createQueryType($db, $productType, $categoryType);
+            $queryType = self::createQueryType($productType, $categoryType);
 
             $mutationType = self::createMutationType();
 
-            $schema = self::createSchema($queryType, $mutationType);
+            $schema = new Schema(
+                (new SchemaConfig())
+                    ->setQuery($queryType)
+                    ->setMutation($mutationType)
+            );
 
             $rawInput = file_get_contents('php://input');
             if ($rawInput === false) {
@@ -39,14 +45,12 @@ class GraphQL {
             $query = $input['query'];
             $variableValues = $input['variables'] ?? null;
 
+            $context = [
+                'productService' => $productService
+            ];
+
             $rootValue = ['prefix' => 'You said: '];
-            $result = GraphQLBase::executeQuery(
-                $schema,
-                $query,
-                $rootValue,
-                null,
-                $variableValues
-            );
+            $result = GraphQLBase::executeQuery($schema, $query, null, $context, $variableValues);
 
             // Include debug details for error tracing
             $output = $result->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE);
@@ -59,7 +63,6 @@ class GraphQL {
         }
 
         header('Content-Type: application/json; charset=UTF-8');
-        // return $output;
         return json_encode($output);
     }
 
@@ -91,10 +94,10 @@ class GraphQL {
         ]);
     }
 
-    private static function createProductType(Database $db, ObjectType $categoryType, ObjectType $attributeType) : ObjectType {
+    private static function createProductType() : ObjectType {
         return new ObjectType([
             'name'   => 'Product',
-            'fields' => function() use ($db, $categoryType, $attributeType) {
+            'fields' => function() {
                 return [
                     'id'          => [
                         'type' => Type::id(),
@@ -136,43 +139,39 @@ class GraphQL {
                             // return $product->getGallery();
                         },
                     ],
-                    'category' => [
-                        'type' => $categoryType,
-                        'resolve' => function ($product, $args, $context, $info) {
-                            $fields = self::getRequestedFields($info);
-                            // var_dump($product);
-                            // exit();
-                            return $product->getCategory($fields);
-                            // return ['name' => 'clothes'];
-                        },
-                    ],
+                    // 'category' => [
+                    //     'type' => $categoryType,
+                    //     'resolve' => function ($product, $args, $context, $info) {
+                    //         $fields = self::getRequestedFields($info);
+                    //         // var_dump($product);
+                    //         // exit();
+                    //         return $product->getCategory($fields);
+                    //         // return ['name' => 'clothes'];
+                    //     },
+                    // ],
                 ];
             },
         ]);
     }
 
-    private static function createQueryType(Database $db, ObjectType $productType, ObjectType $categoryType) : ObjectType {
+    private static function createQueryType() : ObjectType {
         return new ObjectType([
             'name'   => 'Query',
             'fields' => [
                 'products' => [
-                    'type' => Type::listOf($productType),
-                    'resolve' => function($root, $args, $context, $info) use ($db) {
-                        $fields = self::getRequestedFields($info);
-                        $product = new Product($db);
-                        $products = $product->findAllFields($fields);
-
-                        return $products;
+                    'type' => Type::listOf(self::createProductType()),
+                    'resolve' => function($root, $args, $context, $info) {
+                        return $context['productService']->getAllProducts();
                     },
                 ],
 
                 'categories' => [
-                    'type' => Type::listOf($categoryType),
-                    'resolve' => function($root, $args, $context, $info) use ($db) {
-                        $fields = self::getRequestedFields($info);
-                        $category = new Category($db);
+                    'type' => Type::listOf(self::createCategoryType()),
+                    'resolve' => function($root, $args, $context, $info) {
+                        // $fields = self::getRequestedFields($info);
+                        // $category = new Category($db);
 
-                        return $category->findAllFields($fields);
+                        // return $category->findAllFields($fields);
                     },
                 ],
             ],
@@ -193,13 +192,5 @@ class GraphQL {
                 ],
             ],
         ]);
-    }
-
-    private static function createSchema(ObjectType $queryType, ObjectType $mutationType) : Schema {
-        return new Schema(
-            (new SchemaConfig())
-                ->setQuery($queryType)
-                ->setMutation($mutationType)
-        );
     }
 }

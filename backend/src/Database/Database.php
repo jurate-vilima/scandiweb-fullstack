@@ -1,9 +1,8 @@
 <?php
-namespace App;
+namespace App\Database;
 
 use PDO;
 use PDOException;
-use Dotenv\Dotenv;
 
 class Database {
     private PDO $pdo;

@@ -3,15 +3,27 @@ namespace App\Models;
 
 use App\Database;
 
-class Product extends Model {
-    protected string $tableName = 'products';
+class Product {
+    // protected string $tableName = 'products';
 
-    public function __construct(Database $db, array $data = []) {
-        parent::__construct($db, $data); 
+    private string $id;
+    private string $name;
+    private bool $inStock;
+    private string $description;
+    private string $brand;
+    private int $categoryId;
+
+    public function __construct(array $data = []) {
+        $this->id = $data['id'];
+        $this->name = $data['name'];
+        $this->inStock= $data['in_stock'];
+        $this->categoryId = $data['category_id'];
+        $this->description = $data['description'];
+        $this->brand = $data['brand'];
     }
 
     public function getId(): ?string {
-        return $this->data['id'] ?? null;
+        return $this->id ?? null;
     }
 
     public function getName(): ?string {

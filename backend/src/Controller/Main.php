@@ -11,12 +11,6 @@ class Main {
         $query = '{
             products {
                 id
-                name
-                in_stock
-                gallery 
-                category {
-                    name
-                }
             }
         }';
 
