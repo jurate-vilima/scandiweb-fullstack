@@ -12,6 +12,16 @@ class ProductService {
     }
 
     public function getAllProducts(): array {
-        return $this->productRepo->findAll();
+        // $prod = $this->productRepo->findAll();
+        // return $prod;
+
+        $products = $this->productRepo->findAll();
+        return array_map(fn($product) => [
+            'id' => $product->getId(),
+            'name' => $product->getName(),
+            'description' => $product->getDescription(),
+            'in_stock' => $product->isInStock(),
+            'brand' => $product->getBrand(),
+        ], $products);
     }
 }

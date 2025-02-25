@@ -2,11 +2,11 @@
 namespace App\Repositories;
 
 use App\Database\Database;
-use App\Models\Product;
+use App\Models\Category;
 
-class ProductRepository {
+class CategoryRepository {
     private Database $db;
-    private string $table = 'products';
+    private string $table = 'categories';
 
     public function __construct(Database $db) {
         $this->db = $db;
@@ -14,11 +14,11 @@ class ProductRepository {
 
     public function findAll(): array {
         $products = $this->db->executeQuery("SELECT * FROM $this->table");
-        return array_map(fn($data) => new Product($data), $products);
+        return array_map(fn($data) => new Category($data), $products);
     }
 
-    public function findById(string $id): ?Product {
+    public function findById(string $id): ?Category {
         $data = $this->db->executeQuery("SELECT * FROM $this->table WHERE id = ?", [$id], true);
-        return $data ? new Product($data) : null;
+        return $data ? new Category($data) : null;
     }
 }

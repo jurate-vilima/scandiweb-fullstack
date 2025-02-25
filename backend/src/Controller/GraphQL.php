@@ -11,23 +11,23 @@ use App\Database\Database;
 
 use App\Services\ProductService;
 use App\Repositories\ProductRepository;
+use App\Services\CategoryService;
+use App\Repositories\CategoryRepository;
 
 use RuntimeException;
 use Throwable;
 
 class GraphQL {
-    static public function handle()  { 
+    static public function handle() { 
         try {
             $db = new Database();
             $productRepo = new ProductRepository($db);
             $productService = new ProductService($productRepo);
 
-            $categoryType = self::createCategoryType();
-            $attributeType = self::createAttributeType();
-            $productType = self::createProductType($categoryType, $attributeType);
+            $categoryRepo = new CategoryRepository($db);
+            $categoryService = new CategoryService($categoryRepo);
 
-            $queryType = self::createQueryType($productType, $categoryType);
-
+            $queryType = self::createQueryType();
             $mutationType = self::createMutationType();
 
             $schema = new Schema(
@@ -46,14 +46,14 @@ class GraphQL {
             $variableValues = $input['variables'] ?? null;
 
             $context = [
-                'productService' => $productService
+                'productService' => $productService,
+                'categoryService' => $categoryService,
             ];
 
-            $rootValue = ['prefix' => 'You said: '];
             $result = GraphQLBase::executeQuery($schema, $query, null, $context, $variableValues);
 
-            // Include debug details for error tracing
             $output = $result->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE);
+            var_dump($output);
         } catch (Throwable $e) {
             $output = [
                 'error' => [
@@ -77,8 +77,14 @@ class GraphQL {
         return new ObjectType([
             'name'   => 'Category',
             'fields' => [
-                'id' => Type::id(),
-                'name' => Type::string(),
+                'id' => [
+                    'type' => Type::nonNull(Type::id()),
+                    'resolve' => fn($category) => $category->getId(),
+                ],
+                'name' => [
+                    'type' => Type::nonNull(Type::string()),
+                    'resolve' => fn($category) => $category->getName(),
+                ],
             ],
         ]);
     }
@@ -100,16 +106,14 @@ class GraphQL {
             'fields' => function() {
                 return [
                     'id'          => [
-                        'type' => Type::id(),
-                        'resolve' => function ($product) {
-                            return $product->getId();
-                        },
+                        'type' => Type::nonNull(Type::id()),
+                        // 'resolve' => fn($product) => $product->getId(),
                     ],
                     'name'        => [
                         'type' => Type::string(),
-                        'resolve' => function ($product) {
-                            return $product->getName();
-                        },
+                        // 'resolve' => function ($product) {
+                        //     return $product->getName();
+                        // },
                     ],
                     'in_stock'    => [
                         'type' => Type::boolean(),
@@ -132,7 +136,15 @@ class GraphQL {
                     'gallery'     => [
                         'type' => Type::listOf(Type::string()),
                         'resolve' => function ($product) {
-                            $galleryData = $product->getGallery(); // Assuming this is an array of objects
+                            $galleryData = $product->getGallery(); 
+                            $galleryUrls = array_map(fn($image) => $image['image_url'], $galleryData);
+                            return $galleryUrls;
+                        },
+                    ],
+                    'prices'     => [
+                        'type' => Type::listOf(Type::string()),
+                        'resolve' => function ($product) {
+                            $galleryData = $product->getGallery(); 
                             $galleryUrls = array_map(fn($image) => $image['image_url'], $galleryData);
                             return $galleryUrls;
                             
@@ -160,19 +172,12 @@ class GraphQL {
             'fields' => [
                 'products' => [
                     'type' => Type::listOf(self::createProductType()),
-                    'resolve' => function($root, $args, $context, $info) {
-                        return $context['productService']->getAllProducts();
-                    },
+                    'resolve' => fn($root, $args, $context) => $context['productService']->getAllProducts(),
                 ],
 
                 'categories' => [
                     'type' => Type::listOf(self::createCategoryType()),
-                    'resolve' => function($root, $args, $context, $info) {
-                        // $fields = self::getRequestedFields($info);
-                        // $category = new Category($db);
-
-                        // return $category->findAllFields($fields);
-                    },
+                    'resolve' => fn($root, $args, $context) => $context['categoryService']->getAllCategories(),
                 ],
             ],
         ]);

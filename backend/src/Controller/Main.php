@@ -10,7 +10,7 @@ class Main {
         $url = 'http://scandiweb-store/graphql'; 
         $query = '{
             products {
-                id
+                name
             }
         }';
 
