@@ -7,6 +7,7 @@ ini_set('display_errors', 1);
 
 class Main {
     public function main() {
+        echo 'main';
         $url = 'http://scandiweb-store/graphql'; 
         $query = '{
             products {

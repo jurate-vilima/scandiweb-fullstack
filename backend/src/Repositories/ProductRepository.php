@@ -12,10 +12,12 @@ class ProductRepository {
         $this->db = $db;
     }
 
-    public function findAll(): array {
-        $products = $this->db->executeQuery("SELECT * FROM $this->table");
-        return array_map(fn($data) => new Product($data), $products);
-    }
+    public function findAll(array $requestedFields = ['id', 'name', 'description', 'in_stock', 'brand']): array {
+        $fields = implode(',', $requestedFields);
+        $sql = "SELECT $fields FROM $this->table";
+        
+        return $this->db->executeQuery($sql); 
+    }    
 
     public function findById(string $id): ?Product {
         $data = $this->db->executeQuery("SELECT * FROM $this->table WHERE id = ?", [$id], true);

@@ -10,6 +10,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../config');
 $dotenv->load();
 
+$container = require __DIR__ . '/../config/container.php';
+
 $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
     $r->post('/graphql', [App\Controller\GraphQL::class, 'handle']);
     $r->get('/', [App\Controller\Main::class, 'main']);
@@ -30,14 +32,19 @@ switch ($routeInfo[0]) {
         echo '405 Method Not Allowed';
         break;
     case FastRoute\Dispatcher::FOUND:
-        $controller = new $routeInfo[1][0];
+        $controllerClass = $routeInfo[1][0];
         $action = $routeInfo[1][1];
 
+        $controller = $container->get($controllerClass);
+        $productService = $container->get(App\Services\ProductService::class);
+        echo call_user_func([$controller, $action], $productService);
+        //echo $controller->$action();
+
+        // var_dump($controller);
+        // exit();
+
         // echo $controller->$action();
-        print_r($controller->$action());
-        // $handler = $routeInfo[1];
-        // $vars = $routeInfo[2];
+        // print_r($controller->$action());
         // echo $handler($vars);
         break;
 }
-// echo 'gdfgfd';

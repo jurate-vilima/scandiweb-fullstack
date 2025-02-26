@@ -18,15 +18,9 @@ use RuntimeException;
 use Throwable;
 
 class GraphQL {
-    static public function handle() { 
+    static public function handle(ProductService $productService) { 
+        echo 'handle';
         try {
-            $db = new Database();
-            $productRepo = new ProductRepository($db);
-            $productService = new ProductService($productRepo);
-
-            $categoryRepo = new CategoryRepository($db);
-            $categoryService = new CategoryService($categoryRepo);
-
             $queryType = self::createQueryType();
             $mutationType = self::createMutationType();
 
@@ -47,7 +41,7 @@ class GraphQL {
 
             $context = [
                 'productService' => $productService,
-                'categoryService' => $categoryService,
+                // 'categoryService' => $categoryService,
             ];
 
             $result = GraphQLBase::executeQuery($schema, $query, null, $context, $variableValues);
@@ -66,7 +60,7 @@ class GraphQL {
         return json_encode($output);
     }
 
-    private static function getRequestedFields($info) {
+    private static function getRequestedFields($info): array {
         return array_map(
             fn($field) => $field->name->value,
             iterator_to_array($info->fieldNodes[0]->selectionSet->selections)
@@ -172,7 +166,10 @@ class GraphQL {
             'fields' => [
                 'products' => [
                     'type' => Type::listOf(self::createProductType()),
-                    'resolve' => fn($root, $args, $context) => $context['productService']->getAllProducts(),
+                    'resolve' => function($root, $args, $context, $info) {
+                        $requestedFields = self::getRequestedFields($info);
+                        return $context['productService']->getAllProducts($requestedFields);
+                    },
                 ],
 
                 'categories' => [
@@ -198,4 +195,5 @@ class GraphQL {
             ],
         ]);
     }
+    
 }
