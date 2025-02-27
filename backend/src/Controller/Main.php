@@ -7,7 +7,6 @@ ini_set('display_errors', 1);
 
 class Main {
     public function main() {
-        echo 'main';
         $url = 'http://scandiweb-store/graphql'; 
         $query = '{
             products {
@@ -58,7 +57,6 @@ class Main {
         if (isset($result['error'])) {
             echo "GraphQL Error: " . print_r($result['error'], true) . "\n";
         } else {
-            // echo "Final result:\n";
             print "<pre>";
             var_dump($response);
             print "</pre>";

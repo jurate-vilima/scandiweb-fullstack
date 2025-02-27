@@ -13,7 +13,7 @@ $dotenv->load();
 $container = require __DIR__ . '/../config/container.php';
 
 $dispatcher = FastRoute\simpleDispatcher(function(FastRoute\RouteCollector $r) {
-    $r->post('/graphql', [App\Controller\GraphQL::class, 'handle']);
+    $r->post('/graphql', [App\Controller\GraphQLController::class, 'handle']);
     $r->get('/', [App\Controller\Main::class, 'main']);
 });
 
@@ -36,15 +36,7 @@ switch ($routeInfo[0]) {
         $action = $routeInfo[1][1];
 
         $controller = $container->get($controllerClass);
-        $productService = $container->get(App\Services\ProductService::class);
-        echo call_user_func([$controller, $action], $productService);
-        //echo $controller->$action();
+        call_user_func([$controller, $action]);
 
-        // var_dump($controller);
-        // exit();
-
-        // echo $controller->$action();
-        // print_r($controller->$action());
-        // echo $handler($vars);
         break;
 }
